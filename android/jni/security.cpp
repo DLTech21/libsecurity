@@ -2,10 +2,6 @@
  *   Copyright (C) 2015 All rights reserved.
  *
  *   文件名称：security.cpp
- *   创 建 者：Zhang Yuanhao
- *   邮    箱：bluefoxah@gmail.com
- *   创建日期：2015年01月29日
- *   描    述：
  *
  #include "security.h"
  ================================================================*/
@@ -48,7 +44,7 @@ extern "C" {
     
 #ifdef __ANDROID__
 
-    jbyteArray Java_com_dtalk_dd_Security_EncryptMsg(JNIEnv* env, jobject obj, jstring jstr)
+    jbyteArray Java_io_github_dltech21_Security_EncryptMsg(JNIEnv* env, jobject obj, jstring jstr)
     {
         const char *pInData = env->GetStringUTFChars(jstr, NULL);		//待加密内容,转换格式
         uint32_t nInLen = strlen(pInData);
@@ -88,7 +84,7 @@ extern "C" {
     /**
      * 解密
      */
-    jbyteArray Java_com_dtalk_dd_Security_DecryptMsg(JNIEnv* env, jobject obj, jstring jstr)
+    jbyteArray Java_io_github_dltech21_Security_DecryptMsg(JNIEnv* env, jobject obj, jstring jstr)
     {
         const char *pInData = env->GetStringUTFChars(jstr, NULL);   //获取待揭秘内容,转换格式
         uint32_t nInLen = strlen(pInData);
@@ -135,7 +131,7 @@ extern "C" {
         return carr;
     }
     
-    jbyteArray Java_com_dtalk_dd_Security_EncryptPass(JNIEnv* env, jobject obj, jstring jstr)
+    jbyteArray Java_io_github_dltech21_Security_EncryptPass(JNIEnv* env, jobject obj, jstring jstr)
     {
         const char *pInData = env->GetStringUTFChars(jstr, NULL);		//待加密内容,转换格式
         uint32_t nInLen = strlen(pInData);

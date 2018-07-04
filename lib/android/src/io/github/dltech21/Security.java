@@ -1,4 +1,4 @@
-package com.mogujie.tt;
+package io.github.dltech21;
 
 public class Security {
 	
