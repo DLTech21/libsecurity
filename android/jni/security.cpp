@@ -74,6 +74,7 @@ extern "C" {
         free(pData);
         string strEnc((char*)pEncData, nEncryptLen);
         free(pEncData);
+        env->ReleaseStringUTFChars(jstrKey,key);
         string strDec = base64_encode(strEnc);
         
         jbyteArray carr = env->NewByteArray(strDec.length());
@@ -127,6 +128,7 @@ extern "C" {
         pTmp[nOutLen] = 0;
         jbyteArray carr = env->NewByteArray(nOutLen);
         env->SetByteArrayRegion(carr,0,nOutLen,(jbyte*)pTmp);
+        env->ReleaseStringUTFChars(jstrKey,key);
         free(pTmp);
         return carr;
     }
