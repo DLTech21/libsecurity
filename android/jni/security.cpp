@@ -44,7 +44,7 @@ extern "C" {
     
 #ifdef __ANDROID__
 
-    jbyteArray Java_io_github_dltech21_Security_EncryptMsg(JNIEnv* env, jobject obj, jstring jstr)
+    jbyteArray Java_io_github_dltech21_Security_EncryptMsg(JNIEnv* env, jobject obj, jstring jstr, jstring jstrKey)
     {
         const char *pInData = env->GetStringUTFChars(jstr, NULL);		//待加密内容,转换格式
         uint32_t nInLen = strlen(pInData);
@@ -65,7 +65,7 @@ extern "C" {
         
         WriteUint32((pData + nEncryptLen - 4), nInLen);
         AES_KEY aesKey;
-        const char *key = "00111946655405188575651534545107";
+        const char *key = env->GetStringUTFChars(jstrKey, NULL);
         AES_set_encrypt_key((const unsigned char*)key, 256, &aesKey);
         for (uint32_t i = 0; i < nBlocks; i++) {
             AES_encrypt(pData + i * 16, pEncData + i * 16, &aesKey);
@@ -84,7 +84,7 @@ extern "C" {
     /**
      * 解密
      */
-    jbyteArray Java_io_github_dltech21_Security_DecryptMsg(JNIEnv* env, jobject obj, jstring jstr)
+    jbyteArray Java_io_github_dltech21_Security_DecryptMsg(JNIEnv* env, jobject obj, jstring jstr, jstring jstrKey)
     {
         const char *pInData = env->GetStringUTFChars(jstr, NULL);   //获取待揭秘内容,转换格式
         uint32_t nInLen = strlen(pInData);
@@ -110,7 +110,7 @@ extern "C" {
         uint32_t nBlocks = nLen / 16;
         AES_KEY aesKey;
         
-        const char *key = "00111946655405188575651534545107";
+        const char *key = env->GetStringUTFChars(jstrKey, NULL);
         AES_set_decrypt_key((const unsigned char*) key, 256, &aesKey);           //设置AES解密密钥
         for (uint32_t i = 0; i < nBlocks; i++) {
             AES_decrypt(pData + i * 16, (unsigned char*)pTmp + i * 16, &aesKey);
