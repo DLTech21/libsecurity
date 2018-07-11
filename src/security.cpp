@@ -20,7 +20,7 @@
 #include "aes.h"
 #include "aes_locl.h"
 #include "base64.h"
-#include "../../include/security.h"
+#include "../include/security.h"
 #include "md5.h"
 
 uint32_t ReadUint32(uchar_t *buf)
