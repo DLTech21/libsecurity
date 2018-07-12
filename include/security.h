@@ -37,13 +37,15 @@ extern "C" {
 #endif
     
 #ifdef __ANDROID__
-    jbyteArray Java_io_github_dltech21_Security_EncryptMsg(JNIEnv* env, jobject obj, jstring jstr, jstring jstrKey);
-    jbyteArray Java_io_github_dltech21_Security_DecryptMsg(JNIEnv* env, jobject obj, jstring jstr, jstring jstrKey);
+    jbyteArray Java_io_github_dltech21_Security_EncryptByKey(JNIEnv* env, jobject obj, jstring jstr, jstring jstrKey);
+    jbyteArray Java_io_github_dltech21_Security_DecryptByKey(JNIEnv* env, jobject obj, jstring jstr, jstring jstrKey);
+    jbyteArray Java_io_github_dltech21_Security_EncryptContent(JNIEnv* env, jobject obj, jstring jstr);
+    jbyteArray Java_io_github_dltech21_Security_DecryptContent(JNIEnv* env, jobject obj, jstring jstr);
     jbyteArray Java_io_github_dltech21_Security_EncryptPass(JNIEnv* env, jobject obj, jstring jstr);
 
 #else
     /**
-     *  对消息加密
+     *  带key对内容加密
      *
      *  @param pInData  待加密的消息内容指针
      *  @param nInLen   待加密消息内容长度
@@ -54,10 +56,10 @@ extern "C" {
      *
      *  @return 返回 0-成功; 其他-失败
      */
-    DLL_MODIFIER int EncryptMsg(const char* pInData, uint32_t nInLen, const char *keyData, uint32_t keyInLen, char** pOutData, uint32_t& nOutLen);
+    DLL_MODIFIER int EncryptByKey(const char* pInData, uint32_t nInLen, const char *keyData, uint32_t keyInLen, char** pOutData, uint32_t& nOutLen);
     
     /**
-     *  对消息解密
+     *  带key对内容解密
      *
      *  @param pInData  待解密的消息内容指针
      *  @param nInLen   待解密消息内容长度
@@ -68,8 +70,12 @@ extern "C" {
      *
      *  @return 返回 0-成功; 其他-失败
      */
-    DLL_MODIFIER int DecryptMsg(const char* pInData, uint32_t nInLen, const char *keyData, uint32_t keyInLen, char** pOutData, uint32_t& nOutLen);
+    DLL_MODIFIER int DecryptByKey(const char* pInData, uint32_t nInLen, const char *keyData, uint32_t keyInLen, char** pOutData, uint32_t& nOutLen);
     
+
+    DLL_MODIFIER int EncryptContent(const char* pInData, uint32_t nInLen, char** pOutData, uint32_t& nOutLen);
+    DLL_MODIFIER int DecryptContent(const char* pInData, uint32_t nInLen, char** pOutData, uint32_t& nOutLen);
+
     /**
      *  对密码进行加密
      *
