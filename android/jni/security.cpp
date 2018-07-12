@@ -163,7 +163,7 @@ extern "C" {
 #else
     int EncryptMsg(const char* pInData, uint32_t nInLen, const char *keyData, uint32_t keyInLen, char** ppOutData, uint32_t& nOutLen)
     {
-        if(keyData == NULL|| keyInLen !=0 )
+        if(keyData == NULL|| keyInLen !=32 )
         {
             return -1;
         }
@@ -207,7 +207,7 @@ extern "C" {
     
     int DecryptMsg(const char* pInData, uint32_t nInLen, const char *keyData, uint32_t keyInLen, char** ppOutData, uint32_t& nOutLen)
     {
-        if(keyData == NULL|| keyInLen !=0 )
+        if(keyData == NULL|| keyInLen !=32 )
         {
             return -1;
         }

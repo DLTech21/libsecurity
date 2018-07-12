@@ -47,6 +47,8 @@ extern "C" {
      *
      *  @param pInData  待加密的消息内容指针
      *  @param nInLen   待加密消息内容长度
+     *  @param keyData  加密key指针 只能传入32位
+     *  @param keyInLen 加密key长度 长度只能是32
      *  @param pOutData 加密后的文本
      *  @param nOutLen  加密后的文本长度
      *
@@ -59,6 +61,8 @@ extern "C" {
      *
      *  @param pInData  待解密的消息内容指针
      *  @param nInLen   待解密消息内容长度
+     *  @param keyData  加密key指针 只能传入32位
+     *  @param keyInLen 加密key长度 长度只能是32
      *  @param pOutData 解密后的文本
      *  @param nOutLen  解密后的文本长度
      *
