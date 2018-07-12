@@ -44,7 +44,7 @@ extern "C" {
     
 #ifdef __ANDROID__
 
-    jbyteArray Java_io_github_dltech21_Security_EncryptMsg(JNIEnv* env, jobject obj, jstring jstr, jstring jstrKey)
+    jbyteArray Java_io_github_dltech21_Security_EncryptByKey(JNIEnv* env, jobject obj, jstring jstr, jstring jstrKey)
     {
         const char *pInData = env->GetStringUTFChars(jstr, NULL);		//待加密内容,转换格式
         uint32_t nInLen = strlen(pInData);
@@ -85,7 +85,7 @@ extern "C" {
     /**
      * 解密
      */
-    jbyteArray Java_io_github_dltech21_Security_DecryptMsg(JNIEnv* env, jobject obj, jstring jstr, jstring jstrKey)
+    jbyteArray Java_io_github_dltech21_Security_DecryptByKey(JNIEnv* env, jobject obj, jstring jstr, jstring jstrKey)
     {
         const char *pInData = env->GetStringUTFChars(jstr, NULL);   //获取待揭秘内容,转换格式
         uint32_t nInLen = strlen(pInData);
@@ -132,6 +132,93 @@ extern "C" {
         free(pTmp);
         return carr;
     }
+
+    jbyteArray Java_io_github_dltech21_Security_EncryptContent(JNIEnv* env, jobject obj, jstring jstr)
+    {
+        const char *pInData = env->GetStringUTFChars(jstr, NULL);       //待加密内容,转换格式
+        uint32_t nInLen = strlen(pInData);
+        
+        uint32_t nRemain = nInLen % 16;
+        uint32_t nBlocks = (nInLen + 15) / 16;
+        
+        if (nRemain > 12 || nRemain == 0) {
+            nBlocks += 1;
+        }
+        uint32_t nEncryptLen = nBlocks * 16;
+        
+        unsigned char* pData = (unsigned char*) calloc(nEncryptLen, 1);
+        memcpy(pData, pInData, nInLen);
+        env->ReleaseStringUTFChars(jstr,pInData);
+        
+        unsigned char* pEncData = (unsigned char*) malloc(nEncryptLen);
+        
+        WriteUint32((pData + nEncryptLen - 4), nInLen);
+        AES_KEY aesKey;
+        const char *key = "00111946655405188575651534545107";
+        AES_set_encrypt_key((const unsigned char*)key, 256, &aesKey);
+        for (uint32_t i = 0; i < nBlocks; i++) {
+            AES_encrypt(pData + i * 16, pEncData + i * 16, &aesKey);
+        }
+        
+        free(pData);
+        string strEnc((char*)pEncData, nEncryptLen);
+        free(pEncData);
+        string strDec = base64_encode(strEnc);
+        
+        jbyteArray carr = env->NewByteArray(strDec.length());
+        env->SetByteArrayRegion(carr,0,strDec.length(),(jbyte*)strDec.c_str());
+        return carr;
+    }
+    
+    /**
+     * 解密
+     */
+    jbyteArray Java_io_github_dltech21_Security_DecryptContent(JNIEnv* env, jobject obj, jstring jstr)
+    {
+        const char *pInData = env->GetStringUTFChars(jstr, NULL);   //获取待揭秘内容,转换格式
+        uint32_t nInLen = strlen(pInData);
+        string strInData(pInData, nInLen);
+        env->ReleaseStringUTFChars(jstr,pInData);
+        std::string strResult = base64_decode(strInData);
+        uint32_t nLen = (uint32_t)strResult.length();
+        if(nLen == 0)
+        {
+            jbyteArray carr = env->NewByteArray(0);
+            return carr;
+        }
+        
+        const unsigned char* pData = (const unsigned char*) strResult.c_str();
+        
+        if (nLen % 16 != 0) {
+            jbyteArray carr = env->NewByteArray(0);
+            return carr;
+        }
+        // 先申请nLen 个长度，解密完成后的长度应该小于该长度
+        char* pTmp = (char*)malloc(nLen + 1);
+        
+        uint32_t nBlocks = nLen / 16;
+        AES_KEY aesKey;
+        
+        const char *key = "00111946655405188575651534545107";
+        AES_set_decrypt_key((const unsigned char*) key, 256, &aesKey);           //设置AES解密密钥
+        for (uint32_t i = 0; i < nBlocks; i++) {
+            AES_decrypt(pData + i * 16, (unsigned char*)pTmp + i * 16, &aesKey);
+        }
+        uchar_t* pStart = (uchar_t*)pTmp+nLen-4;
+        uint32_t nOutLen = ReadUint32(pStart);
+        
+        if(nOutLen > nLen)
+        {
+            free(pTmp);
+            jbyteArray carr = env->NewByteArray(0);
+            return carr;
+        }
+        pTmp[nOutLen] = 0;
+        jbyteArray carr = env->NewByteArray(nOutLen);
+        env->SetByteArrayRegion(carr,0,nOutLen,(jbyte*)pTmp);
+        free(pTmp);
+        return carr;
+    }
     
     jbyteArray Java_io_github_dltech21_Security_EncryptPass(JNIEnv* env, jobject obj, jstring jstr)
     {
@@ -161,7 +248,7 @@ extern "C" {
     }
     
 #else
-    int EncryptMsg(const char* pInData, uint32_t nInLen, const char* keyData, uint32_t keyInLen, char** ppOutData, uint32_t& nOutLen)
+    int EncryptByKey(const char* pInData, uint32_t nInLen, const char *keyData, uint32_t keyInLen, char** ppOutData, uint32_t& nOutLen)
     {
         if(keyData == NULL|| keyInLen !=32 )
         {
@@ -205,7 +292,7 @@ extern "C" {
         return 0;
     }
     
-    int DecryptMsg(const char* pInData, uint32_t nInLen, const char* keyData, uint32_t keyInLen, char** ppOutData, uint32_t& nOutLen)
+    int DecryptByKey(const char* pInData, uint32_t nInLen, const char *keyData, uint32_t keyInLen, char** ppOutData, uint32_t& nOutLen)
     {
         if(keyData == NULL|| keyInLen !=32 )
         {
@@ -235,6 +322,90 @@ extern "C" {
         AES_KEY aesKey;
         
         const char *key = keyData;
+        AES_set_decrypt_key((const unsigned char*) key, 256, &aesKey);           //设置AES解密密钥
+        for (uint32_t i = 0; i < nBlocks; i++) {
+            AES_decrypt(pData + i * 16, (unsigned char*)pTmp + i * 16, &aesKey);
+        }
+
+        uchar_t* pStart = (uchar_t*)pTmp+nLen-4;
+        nOutLen = ReadUint32(pStart);
+//        printf("%u\n", nOutLen);
+        if(nOutLen > nLen)
+        {
+            free(pTmp);
+            return -4;
+        }
+        pTmp[nOutLen] = 0;
+        *ppOutData = pTmp;
+        return 0;
+    }
+
+    int EncryptContent(const char* pInData, uint32_t nInLen, char** ppOutData, uint32_t& nOutLen)
+    {
+        if(pInData == NULL|| nInLen <=0 )
+        {
+            return -1;
+        }
+        uint32_t nRemain = nInLen % 16;
+        uint32_t nBlocks = (nInLen + 15) / 16;
+        
+        if (nRemain > 12 || nRemain == 0) {
+            nBlocks += 1;
+        }
+        uint32_t nEncryptLen = nBlocks * 16;
+        
+        unsigned char* pData = (unsigned char*) calloc(nEncryptLen, 1);
+        memcpy(pData, pInData, nInLen);
+        unsigned char* pEncData = (unsigned char*) malloc(nEncryptLen);
+
+        WriteUint32((pData + nEncryptLen - 4), nInLen);
+        AES_KEY aesKey;
+        
+        const char *key = "00111946655405188575651534545107";
+        AES_set_encrypt_key((const unsigned char*)key, 256, &aesKey);
+        for (uint32_t i = 0; i < nBlocks; i++) {
+            AES_encrypt(pData + i * 16, pEncData + i * 16, &aesKey);
+        }
+
+        free(pData);
+        string strEnc((char*)pEncData, nEncryptLen);
+        free(pEncData);
+        string strDec = base64_encode(strEnc);
+        nOutLen = (uint32_t)strDec.length();
+        
+        char* pTmp = (char*) malloc(nOutLen + 1);
+        memcpy(pTmp, strDec.c_str(), nOutLen);
+        pTmp[nOutLen] = 0;
+        *ppOutData = pTmp;
+        return 0;
+    }
+    
+    int DecryptContent(const char* pInData, uint32_t nInLen, char** ppOutData, uint32_t& nOutLen)
+    {
+        if(pInData == NULL|| nInLen <=0 )
+        {
+            return -1;
+        }
+        string strInData(pInData, nInLen);
+        std::string strResult = base64_decode(strInData);
+        uint32_t nLen = (uint32_t)strResult.length();
+        if(nLen == 0)
+        {
+            return -2;
+        }
+
+        const unsigned char* pData = (const unsigned char*) strResult.c_str();
+
+        if (nLen % 16 != 0) {
+            return -3;
+        }
+        // 先申请nLen 个长度，解密完成后的长度应该小于该长度
+        char* pTmp = (char*)malloc(nLen + 1);
+
+        uint32_t nBlocks = nLen / 16;
+        AES_KEY aesKey;
+        
+        const char *key = "00111946655405188575651534545107";
         AES_set_decrypt_key((const unsigned char*) key, 256, &aesKey);           //设置AES解密密钥
         for (uint32_t i = 0; i < nBlocks; i++) {
             AES_decrypt(pData + i * 16, (unsigned char*)pTmp + i * 16, &aesKey);
