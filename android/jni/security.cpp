@@ -161,8 +161,12 @@ extern "C" {
     }
     
 #else
-    int EncryptMsg(const char* pInData, uint32_t nInLen, char** ppOutData, uint32_t& nOutLen)
+    int EncryptMsg(const char* pInData, uint32_t nInLen, const char *keyData, uint32_t keyInLen, char** ppOutData, uint32_t& nOutLen)
     {
+        if(keyData == NULL|| keyInLen !=0 )
+        {
+            return -1;
+        }
         if(pInData == NULL|| nInLen <=0 )
         {
             return -1;
@@ -182,7 +186,7 @@ extern "C" {
         WriteUint32((pData + nEncryptLen - 4), nInLen);
         AES_KEY aesKey;
         
-        const char *key = "00111946655405188575651534545107";
+        const char *key = keyData;
         AES_set_encrypt_key((const unsigned char*)key, 256, &aesKey);
         for (uint32_t i = 0; i < nBlocks; i++) {
             AES_encrypt(pData + i * 16, pEncData + i * 16, &aesKey);
@@ -201,8 +205,12 @@ extern "C" {
         return 0;
     }
     
-    int DecryptMsg(const char* pInData, uint32_t nInLen, char** ppOutData, uint32_t& nOutLen)
+    int DecryptMsg(const char* pInData, uint32_t nInLen, const char *keyData, uint32_t keyInLen, char** ppOutData, uint32_t& nOutLen)
     {
+        if(keyData == NULL|| keyInLen !=0 )
+        {
+            return -1;
+        }
         if(pInData == NULL|| nInLen <=0 )
         {
             return -1;
@@ -226,7 +234,7 @@ extern "C" {
         uint32_t nBlocks = nLen / 16;
         AES_KEY aesKey;
         
-        const char *key = "00111946655405188575651534545107";
+        const char *key = keyData;
         AES_set_decrypt_key((const unsigned char*) key, 256, &aesKey);           //设置AES解密密钥
         for (uint32_t i = 0; i < nBlocks; i++) {
             AES_decrypt(pData + i * 16, (unsigned char*)pTmp + i * 16, &aesKey);
