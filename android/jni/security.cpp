@@ -8,10 +8,16 @@
 #ifdef __ANDROID__
 #include <jni.h>
 #include <android/log.h>
+#include <elf.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/mman.h>
+#include <sys/ptrace.h>
 #define LOGV(...) ((void)__android_log_print(ANDROID_LOG_VERBOSE, "native-activity", __VA_ARGS__))
 #define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "native-activity", __VA_ARGS__))
 #define LOGW(...) ((void)__android_log_print(ANDROID_LOG_WARN, "native-activity", __VA_ARGS__))
 #define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, "native-activity", __VA_ARGS__))
+#define JNIREG_CLASS "io/github/dltech21/Security"
 #endif
 #include <stdio.h>
 #include <stdlib.h>
@@ -43,6 +49,38 @@ extern "C" {
 #endif
     
 #ifdef __ANDROID__
+    
+    static JNINativeMethod gMethods[] = {
+        { "EncryptByKey", "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;", (void*)EncryptByKey},
+        { "DecryptByKey", "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;", (void*)DecryptByKey},
+        { "EncryptContent", "(Ljava/lang/String;)Ljava/lang/String;", (void*)EncryptContent},
+        { "DecryptContent", "(Ljava/lang/String;)Ljava/lang/String;", (void*)DecryptContent},
+        { "EncryptPass", "(Ljava/lang/String;)Ljava/lang/String;", (void*)EncryptPass},
+    };
+    
+    static int registerNativeMethods(JNIEnv* env, const char* className,
+                                     JNINativeMethod* gMethods, int numMethods)
+    {
+        jclass clazz;
+        clazz = env->FindClass( className);
+        if (clazz == NULL) {
+            return JNI_FALSE;
+        }
+        if (env->RegisterNatives( clazz, gMethods, numMethods) < 0) {
+            return JNI_FALSE;
+        }
+        
+        return JNI_TRUE;
+    }
+    
+    static int registerNatives(JNIEnv* env)
+    {
+        if (!registerNativeMethods(env, JNIREG_CLASS, gMethods,
+                                   sizeof(gMethods) / sizeof(gMethods[0])))
+            return JNI_FALSE;
+        
+        return JNI_TRUE;
+    }
     
     //签名信息
     const char *app_sha1="FD305F186972DEA0F22F09C72C03975F6ACB02DB";
@@ -168,8 +206,14 @@ extern "C" {
     }
     
     jint JNI_OnLoad(JavaVM *vm, void *reserved) {
+        ptrace(PTRACE_TRACEME, 0, 0, 0);//反调试
+        
         JNIEnv *env = NULL;
         if (vm->GetEnv((void **) &env, JNI_VERSION_1_4) != JNI_OK) {
+            return JNI_ERR;
+        }
+        
+        if (!registerNatives(env)) {//注册
             return JNI_ERR;
         }
         
@@ -182,7 +226,7 @@ extern "C" {
         }
     }
 
-    jbyteArray Java_io_github_dltech21_Security_EncryptByKey(JNIEnv* env, jobject obj, jstring jstr, jstring jstrKey)
+    __attribute__((section (".mytext"))) JNICALL jstring EncryptByKey(JNIEnv* env, jobject obj, jstring jstr, jstring jstrKey)
     {
         const char *pInData = env->GetStringUTFChars(jstr, NULL);		//待加密内容,转换格式
         uint32_t nInLen = strlen(pInData);
@@ -217,14 +261,23 @@ extern "C" {
         
         jbyteArray carr = env->NewByteArray(strDec.length());
         env->SetByteArrayRegion(carr,0,strDec.length(),(jbyte*)strDec.c_str());
-        return carr;
+        
+        jclass strClass = env->FindClass("java/lang/String");
+        jmethodID ctorID = env->GetMethodID(strClass, "<init>", "([BLjava/lang/String;)V");
+        jstring encoding = env->NewStringUTF("utf-8");
+        jstring str = (jstring)env->NewObject(strClass, ctorID, carr, encoding);
+        return str;
     }
     
     /**
      * 解密
      */
-    jbyteArray Java_io_github_dltech21_Security_DecryptByKey(JNIEnv* env, jobject obj, jstring jstr, jstring jstrKey)
+    __attribute__((section (".mytext"))) JNICALL jstring DecryptByKey(JNIEnv* env, jobject obj, jstring jstr, jstring jstrKey)
     {
+        jclass strClass = env->FindClass("java/lang/String");
+        jmethodID ctorID = env->GetMethodID(strClass, "<init>", "([BLjava/lang/String;)V");
+        jstring encoding = env->NewStringUTF("utf-8");
+        
         const char *pInData = env->GetStringUTFChars(jstr, NULL);   //获取待揭秘内容,转换格式
         uint32_t nInLen = strlen(pInData);
         string strInData(pInData, nInLen);
@@ -234,14 +287,16 @@ extern "C" {
         if(nLen == 0)
         {
             jbyteArray carr = env->NewByteArray(0);
-            return carr;
+            jstring str = (jstring)env->NewObject(strClass, ctorID, carr, encoding);
+            return str;
         }
         
         const unsigned char* pData = (const unsigned char*) strResult.c_str();
         
         if (nLen % 16 != 0) {
             jbyteArray carr = env->NewByteArray(0);
-            return carr;
+            jstring str = (jstring)env->NewObject(strClass, ctorID, carr, encoding);
+            return str;
         }
         // 先申请nLen 个长度，解密完成后的长度应该小于该长度
         char* pTmp = (char*)malloc(nLen + 1);
@@ -261,17 +316,20 @@ extern "C" {
         {
             free(pTmp);
             jbyteArray carr = env->NewByteArray(0);
-            return carr;
+            jstring str = (jstring)env->NewObject(strClass, ctorID, carr, encoding);
+            return str;
         }
         pTmp[nOutLen] = 0;
         jbyteArray carr = env->NewByteArray(nOutLen);
         env->SetByteArrayRegion(carr,0,nOutLen,(jbyte*)pTmp);
         env->ReleaseStringUTFChars(jstrKey,key);
         free(pTmp);
-        return carr;
+        
+        jstring str = (jstring)env->NewObject(strClass, ctorID, carr, encoding);
+        return str;
     }
 
-    jbyteArray Java_io_github_dltech21_Security_EncryptContent(JNIEnv* env, jobject obj, jstring jstr)
+    __attribute__((section (".mytext"))) JNICALL jstring EncryptContent(JNIEnv* env, jobject obj, jstring jstr)
     {
         const char *pInData = env->GetStringUTFChars(jstr, NULL);       //待加密内容,转换格式
         uint32_t nInLen = strlen(pInData);
@@ -305,14 +363,23 @@ extern "C" {
         
         jbyteArray carr = env->NewByteArray(strDec.length());
         env->SetByteArrayRegion(carr,0,strDec.length(),(jbyte*)strDec.c_str());
-        return carr;
+        
+        jclass strClass = env->FindClass("java/lang/String");
+        jmethodID ctorID = env->GetMethodID(strClass, "<init>", "([BLjava/lang/String;)V");
+        jstring encoding = env->NewStringUTF("utf-8");
+        jstring str = (jstring)env->NewObject(strClass, ctorID, carr, encoding);
+        return str;
     }
     
     /**
      * 解密
      */
-    jbyteArray Java_io_github_dltech21_Security_DecryptContent(JNIEnv* env, jobject obj, jstring jstr)
+    __attribute__((section (".mytext"))) JNICALL jstring DecryptContent(JNIEnv* env, jobject obj, jstring jstr)
     {
+        jclass strClass = env->FindClass("java/lang/String");
+        jmethodID ctorID = env->GetMethodID(strClass, "<init>", "([BLjava/lang/String;)V");
+        jstring encoding = env->NewStringUTF("utf-8");
+        
         const char *pInData = env->GetStringUTFChars(jstr, NULL);   //获取待揭秘内容,转换格式
         uint32_t nInLen = strlen(pInData);
         string strInData(pInData, nInLen);
@@ -322,14 +389,16 @@ extern "C" {
         if(nLen == 0)
         {
             jbyteArray carr = env->NewByteArray(0);
-            return carr;
+            jstring str = (jstring)env->NewObject(strClass, ctorID, carr, encoding);
+            return str;
         }
         
         const unsigned char* pData = (const unsigned char*) strResult.c_str();
         
         if (nLen % 16 != 0) {
             jbyteArray carr = env->NewByteArray(0);
-            return carr;
+            jstring str = (jstring)env->NewObject(strClass, ctorID, carr, encoding);
+            return str;
         }
         // 先申请nLen 个长度，解密完成后的长度应该小于该长度
         char* pTmp = (char*)malloc(nLen + 1);
@@ -349,31 +418,40 @@ extern "C" {
         {
             free(pTmp);
             jbyteArray carr = env->NewByteArray(0);
-            return carr;
+            jstring str = (jstring)env->NewObject(strClass, ctorID, carr, encoding);
+            return str;
         }
         pTmp[nOutLen] = 0;
         jbyteArray carr = env->NewByteArray(nOutLen);
         env->SetByteArrayRegion(carr,0,nOutLen,(jbyte*)pTmp);
         free(pTmp);
-        return carr;
+        
+        jstring str = (jstring)env->NewObject(strClass, ctorID, carr, encoding);
+        return str;
     }
     
-    jbyteArray Java_io_github_dltech21_Security_EncryptPass(JNIEnv* env, jobject obj, jstring jstr)
+    __attribute__((section (".mytext"))) JNICALL jstring EncryptPass(JNIEnv* env, jobject obj, jstring jstr)
     {
+        jclass strClass = env->FindClass("java/lang/String");
+        jmethodID ctorID = env->GetMethodID(strClass, "<init>", "([BLjava/lang/String;)V");
+        jstring encoding = env->NewStringUTF("utf-8");
+        
         const char *pInData = env->GetStringUTFChars(jstr, NULL);		//待加密内容,转换格式
         uint32_t nInLen = strlen(pInData);
         if(pInData == NULL || nInLen <=0)
         {
             env->ReleaseStringUTFChars(jstr,pInData);
             jbyteArray carr = env->NewByteArray(0);
-            return carr;
+            jstring str = (jstring)env->NewObject(strClass, ctorID, carr, encoding);
+            return str;
         }
         char *pTmp = (char*)malloc(33);
         if(pTmp == NULL)
         {
             env->ReleaseStringUTFChars(jstr,pInData);
             jbyteArray carr = env->NewByteArray(0);
-            return carr;
+            jstring str = (jstring)env->NewObject(strClass, ctorID, carr, encoding);
+            return str;
         }
         MD5_Calculate(pInData, nInLen, pTmp);
         pTmp[32] = 0;
@@ -382,7 +460,8 @@ extern "C" {
         jbyteArray carr = env->NewByteArray(32);
         env->SetByteArrayRegion(carr,0,32,(jbyte*)pTmp);
         free(pTmp);
-        return carr;
+        jstring str = (jstring)env->NewObject(strClass, ctorID, carr, encoding);
+        return str;
     }
     
 #else

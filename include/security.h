@@ -37,11 +37,11 @@ extern "C" {
 #endif
     
 #ifdef __ANDROID__
-    jbyteArray Java_io_github_dltech21_Security_EncryptByKey(JNIEnv* env, jobject obj, jstring jstr, jstring jstrKey);
-    jbyteArray Java_io_github_dltech21_Security_DecryptByKey(JNIEnv* env, jobject obj, jstring jstr, jstring jstrKey);
-    jbyteArray Java_io_github_dltech21_Security_EncryptContent(JNIEnv* env, jobject obj, jstring jstr);
-    jbyteArray Java_io_github_dltech21_Security_DecryptContent(JNIEnv* env, jobject obj, jstring jstr);
-    jbyteArray Java_io_github_dltech21_Security_EncryptPass(JNIEnv* env, jobject obj, jstring jstr);
+    __attribute__((section (".mytext"))) JNICALL jstring EncryptByKey(JNIEnv* env, jobject obj, jstring jstr, jstring jstrKey);
+    __attribute__((section (".mytext"))) JNICALL jstring DecryptByKey(JNIEnv* env, jobject obj, jstring jstr, jstring jstrKey);
+    __attribute__((section (".mytext"))) JNICALL jstring EncryptContent(JNIEnv* env, jobject obj, jstring jstr);
+    __attribute__((section (".mytext"))) JNICALL jstring DecryptContent(JNIEnv* env, jobject obj, jstring jstr);
+    __attribute__((section (".mytext"))) JNICALL jstring EncryptPass(JNIEnv* env, jobject obj, jstring jstr);
 
 #else
     /**
