@@ -51,11 +51,11 @@ extern "C" {
 #ifdef __ANDROID__
     
     static JNINativeMethod gMethods[] = {
-        { "EncryptByKey", "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;", (void*)EncryptByKey},
-        { "DecryptByKey", "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;", (void*)DecryptByKey},
-        { "EncryptContent", "(Ljava/lang/String;)Ljava/lang/String;", (void*)EncryptContent},
-        { "DecryptContent", "(Ljava/lang/String;)Ljava/lang/String;", (void*)DecryptContent},
-        { "EncryptPass", "(Ljava/lang/String;)Ljava/lang/String;", (void*)EncryptPass},
+        { "EncryptByKey", "(Ljava/lang/String;Ljava/lang/String;)[B", (void*)EncryptByKey},
+        { "DecryptByKey", "(Ljava/lang/String;Ljava/lang/String;)[B", (void*)DecryptByKey},
+        { "EncryptContent", "(Ljava/lang/String;)[B", (void*)EncryptContent},
+        { "DecryptContent", "(Ljava/lang/String;)[B", (void*)DecryptContent},
+        { "EncryptPass", "(Ljava/lang/String;)[B", (void*)EncryptPass},
     };
     
     static int registerNativeMethods(JNIEnv* env, const char* className,
@@ -226,7 +226,7 @@ extern "C" {
         }
     }
 
-    __attribute__((section (".mytext"))) JNICALL jstring EncryptByKey(JNIEnv* env, jobject obj, jstring jstr, jstring jstrKey)
+    __attribute__((section (".mytext"))) JNICALL jbyteArray EncryptByKey(JNIEnv* env, jobject obj, jstring jstr, jstring jstrKey)
     {
         const char *pInData = env->GetStringUTFChars(jstr, NULL);		//待加密内容,转换格式
         uint32_t nInLen = strlen(pInData);
@@ -262,22 +262,14 @@ extern "C" {
         jbyteArray carr = env->NewByteArray(strDec.length());
         env->SetByteArrayRegion(carr,0,strDec.length(),(jbyte*)strDec.c_str());
         
-        jclass strClass = env->FindClass("java/lang/String");
-        jmethodID ctorID = env->GetMethodID(strClass, "<init>", "([BLjava/lang/String;)V");
-        jstring encoding = env->NewStringUTF("utf-8");
-        jstring str = (jstring)env->NewObject(strClass, ctorID, carr, encoding);
-        return str;
+        return carr;
     }
     
     /**
      * 解密
      */
-    __attribute__((section (".mytext"))) JNICALL jstring DecryptByKey(JNIEnv* env, jobject obj, jstring jstr, jstring jstrKey)
+    __attribute__((section (".mytext"))) JNICALL jbyteArray DecryptByKey(JNIEnv* env, jobject obj, jstring jstr, jstring jstrKey)
     {
-        jclass strClass = env->FindClass("java/lang/String");
-        jmethodID ctorID = env->GetMethodID(strClass, "<init>", "([BLjava/lang/String;)V");
-        jstring encoding = env->NewStringUTF("utf-8");
-        
         const char *pInData = env->GetStringUTFChars(jstr, NULL);   //获取待揭秘内容,转换格式
         uint32_t nInLen = strlen(pInData);
         string strInData(pInData, nInLen);
@@ -287,16 +279,14 @@ extern "C" {
         if(nLen == 0)
         {
             jbyteArray carr = env->NewByteArray(0);
-            jstring str = (jstring)env->NewObject(strClass, ctorID, carr, encoding);
-            return str;
+            return carr;
         }
         
         const unsigned char* pData = (const unsigned char*) strResult.c_str();
         
         if (nLen % 16 != 0) {
             jbyteArray carr = env->NewByteArray(0);
-            jstring str = (jstring)env->NewObject(strClass, ctorID, carr, encoding);
-            return str;
+            return carr;
         }
         // 先申请nLen 个长度，解密完成后的长度应该小于该长度
         char* pTmp = (char*)malloc(nLen + 1);
@@ -316,8 +306,7 @@ extern "C" {
         {
             free(pTmp);
             jbyteArray carr = env->NewByteArray(0);
-            jstring str = (jstring)env->NewObject(strClass, ctorID, carr, encoding);
-            return str;
+            return carr;
         }
         pTmp[nOutLen] = 0;
         jbyteArray carr = env->NewByteArray(nOutLen);
@@ -325,11 +314,10 @@ extern "C" {
         env->ReleaseStringUTFChars(jstrKey,key);
         free(pTmp);
         
-        jstring str = (jstring)env->NewObject(strClass, ctorID, carr, encoding);
-        return str;
+        return carr;
     }
 
-    __attribute__((section (".mytext"))) JNICALL jstring EncryptContent(JNIEnv* env, jobject obj, jstring jstr)
+    __attribute__((section (".mytext"))) JNICALL jbyteArray EncryptContent(JNIEnv* env, jobject obj, jstring jstr)
     {
         const char *pInData = env->GetStringUTFChars(jstr, NULL);       //待加密内容,转换格式
         uint32_t nInLen = strlen(pInData);
@@ -364,21 +352,14 @@ extern "C" {
         jbyteArray carr = env->NewByteArray(strDec.length());
         env->SetByteArrayRegion(carr,0,strDec.length(),(jbyte*)strDec.c_str());
         
-        jclass strClass = env->FindClass("java/lang/String");
-        jmethodID ctorID = env->GetMethodID(strClass, "<init>", "([BLjava/lang/String;)V");
-        jstring encoding = env->NewStringUTF("utf-8");
-        jstring str = (jstring)env->NewObject(strClass, ctorID, carr, encoding);
-        return str;
+        return carr;
     }
     
     /**
      * 解密
      */
-    __attribute__((section (".mytext"))) JNICALL jstring DecryptContent(JNIEnv* env, jobject obj, jstring jstr)
+    __attribute__((section (".mytext"))) JNICALL jbyteArray DecryptContent(JNIEnv* env, jobject obj, jstring jstr)
     {
-        jclass strClass = env->FindClass("java/lang/String");
-        jmethodID ctorID = env->GetMethodID(strClass, "<init>", "([BLjava/lang/String;)V");
-        jstring encoding = env->NewStringUTF("utf-8");
         
         const char *pInData = env->GetStringUTFChars(jstr, NULL);   //获取待揭秘内容,转换格式
         uint32_t nInLen = strlen(pInData);
@@ -389,16 +370,14 @@ extern "C" {
         if(nLen == 0)
         {
             jbyteArray carr = env->NewByteArray(0);
-            jstring str = (jstring)env->NewObject(strClass, ctorID, carr, encoding);
-            return str;
+            return carr;
         }
         
         const unsigned char* pData = (const unsigned char*) strResult.c_str();
         
         if (nLen % 16 != 0) {
             jbyteArray carr = env->NewByteArray(0);
-            jstring str = (jstring)env->NewObject(strClass, ctorID, carr, encoding);
-            return str;
+            return carr;
         }
         // 先申请nLen 个长度，解密完成后的长度应该小于该长度
         char* pTmp = (char*)malloc(nLen + 1);
@@ -418,23 +397,18 @@ extern "C" {
         {
             free(pTmp);
             jbyteArray carr = env->NewByteArray(0);
-            jstring str = (jstring)env->NewObject(strClass, ctorID, carr, encoding);
-            return str;
+            return carr;
         }
         pTmp[nOutLen] = 0;
         jbyteArray carr = env->NewByteArray(nOutLen);
         env->SetByteArrayRegion(carr,0,nOutLen,(jbyte*)pTmp);
         free(pTmp);
         
-        jstring str = (jstring)env->NewObject(strClass, ctorID, carr, encoding);
-        return str;
+        return carr;
     }
     
-    __attribute__((section (".mytext"))) JNICALL jstring EncryptPass(JNIEnv* env, jobject obj, jstring jstr)
+    __attribute__((section (".mytext"))) JNICALL jbyteArray EncryptPass(JNIEnv* env, jobject obj, jstring jstr)
     {
-        jclass strClass = env->FindClass("java/lang/String");
-        jmethodID ctorID = env->GetMethodID(strClass, "<init>", "([BLjava/lang/String;)V");
-        jstring encoding = env->NewStringUTF("utf-8");
         
         const char *pInData = env->GetStringUTFChars(jstr, NULL);		//待加密内容,转换格式
         uint32_t nInLen = strlen(pInData);
@@ -442,16 +416,14 @@ extern "C" {
         {
             env->ReleaseStringUTFChars(jstr,pInData);
             jbyteArray carr = env->NewByteArray(0);
-            jstring str = (jstring)env->NewObject(strClass, ctorID, carr, encoding);
-            return str;
+            return carr;
         }
         char *pTmp = (char*)malloc(33);
         if(pTmp == NULL)
         {
             env->ReleaseStringUTFChars(jstr,pInData);
             jbyteArray carr = env->NewByteArray(0);
-            jstring str = (jstring)env->NewObject(strClass, ctorID, carr, encoding);
-            return str;
+            return carr;
         }
         MD5_Calculate(pInData, nInLen, pTmp);
         pTmp[32] = 0;
@@ -460,8 +432,7 @@ extern "C" {
         jbyteArray carr = env->NewByteArray(32);
         env->SetByteArrayRegion(carr,0,32,(jbyte*)pTmp);
         free(pTmp);
-        jstring str = (jstring)env->NewObject(strClass, ctorID, carr, encoding);
-        return str;
+        return carr;
     }
     
 #else
