@@ -20,5 +20,3 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-//g++ -fPIC -shared -c aes_core.cpp base64.cpp md5.cpp security.cpp
-//g++ -fPIC -shared -o libsecurity.so aes_core.o base64.o md5.o security.o
